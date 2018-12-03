@@ -1,7 +1,7 @@
 
 ## Hardware design
 
-ATMEGA32U4 has built-in USB interface, for easily reprogramming the device without a USB to serial converter. The system is powered at 3.3v and clocked at 8MHz. Bluetooth module is HC-06 configured in slave mode. Another option is HC-05, which is programmable as master of slave, but that is out of bound of the design. RGB LED is Neopixel Nano, with a tiny footprint of 2.4x2.7mm.
+ATMEGA32U4 has built-in USB interface, for easily reprogramming the device without a USB to serial converter. The system is powered at 3.3v and clocked at 8MHz. Bluetooth module is HC-06 configured in slave mode. Another option is HC-05, which is programmable as master of slave, but that is out of bound of the design. RGB LEDs are Neopixel Nano, with a small footprint of 2.4x2.7mm.
 
 Diameter of the circular PCB is 1.7in, radius of 850 mil.
 
@@ -19,9 +19,9 @@ pos(6:10,3) = 22+34*n;
 
 ### Board fix
 
-Checkout picture *board_fix.png*.
+![post-assembly modifications](board_fix.png)
 
 **Reset pin of ATMEGA32U4 should be pulled up to 3V3 with a 10K resistor**
 
-**Enable pins of two regulators are not working as expected, the voltage level does not match. Used jumpers to keep them enabled.**
+**Enable pins of two regulators for bluetooth and IMU are not working as expected, because the voltage level does not match. Jumpers were used to keep them enabled always.**
 

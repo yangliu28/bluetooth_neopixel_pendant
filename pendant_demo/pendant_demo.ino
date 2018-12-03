@@ -1,7 +1,7 @@
 #include <Adafruit_NeoPixel.h>
+#include "Wire.h"
 #include "I2Cdev.h"
 #include "MPU6050.h"
-#include "Wire.h"
 
 #define NEOPIXEL_PIN 10
 #define NEOPIXEL_NUM 10
@@ -11,16 +11,13 @@ int16_t ax, ay, az;
 int16_t gx, gy, gz;
 
 void setup() {
-    pinMode(IMU_ENABLE, OUTPUT);
-    digitalWrite(IMU_ENABLE, HIGH);
     Wire.begin();
     Serial.begin(9600);
 
-    // initialize device
+    // initialize MPU6050
     Serial.println("Initializing I2C devices...");
     accelgyro.initialize();
-
-    // verify connection
+    // verify IMU connection
     Serial.println("Testing device connections...");
     Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 }
