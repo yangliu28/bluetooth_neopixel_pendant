@@ -17,5 +17,11 @@ pos(1:5,3) = -180+22+34*n;
 pos(6:10,3) = 22+34*n;
 ```
 
-**Reset pin should be pulled up to 3V3 with a 10K resistor, checkout RST_pullup.png**
+### Board fix
+
+Checkout picture *board_fix.png*.
+
+**Reset pin of ATMEGA32U4 should be pulled up to 3V3 with a 10K resistor**
+
+**Enable pins of two regulators are not working as expected, the voltage level does not match. Used jumpers to keep them enabled.**
 

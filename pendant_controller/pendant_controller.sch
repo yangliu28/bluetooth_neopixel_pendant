@@ -3752,7 +3752,9 @@ Small SMD resonator. This is the itty bitty 10/20MHz resonators with built in ca
 <text x="162.56" y="25.4" size="1.778" layer="91">Power supply for bluetooth and IMU are individually controlled.
 Unnecessary leds: bluetooth led is dimed; led on IO13 also acts as power indicator;
 charge led goes on only when charging.</text>
-<text x="162.56" y="35.56" size="1.778" layer="94">Error: RST should be pulled up to 3V3 with a 10K resistor.</text>
+<text x="162.56" y="33.02" size="1.778" layer="94">Error: RST should be pulled up to 3V3 with a 10K resistor.
+Error: enable pins of the two regulators for bluetooth and IMU are not working
+  as desired, voltage level does not match.</text>
 </plain>
 <instances>
 <instance part="FRAME1" gate="G$1" x="0" y="0" smashed="yes">

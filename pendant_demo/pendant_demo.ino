@@ -5,8 +5,6 @@
 
 #define NEOPIXEL_PIN 10
 #define NEOPIXEL_NUM 10
-#define IMU_ENABLE 5
-#define BLUETOOTH_ENABLE 6
 
 MPU6050 accelgyro;
 int16_t ax, ay, az;
@@ -38,5 +36,4 @@ void loop() {
     Serial.println(gz);
     delay(100);
 }
-
 
