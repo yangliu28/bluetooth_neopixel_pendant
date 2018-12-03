@@ -19,7 +19,7 @@ pos(6:10,3) = 22+34*n;
 
 ### Board fix
 
-![post-assembly modifications](board_fix.png)
+![post-assembly modifications](board_fix.jpg)
 
 **Reset pin of ATMEGA32U4 should be pulled up to 3V3 with a 10K resistor**
 

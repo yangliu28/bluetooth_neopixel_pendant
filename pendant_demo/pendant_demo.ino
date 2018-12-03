@@ -20,17 +20,22 @@ void setup() {
     // verify IMU connection
     Serial.println("Testing device connections...");
     Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+
+    Serial1.begin(9600);
 }
 
 void loop() {
-    accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-    Serial.print("a/g:\t");
-    Serial.print(ax); Serial.print("\t");
-    Serial.print(ay); Serial.print("\t");
-    Serial.print(az); Serial.print("\t");
-    Serial.print(gx); Serial.print("\t");
-    Serial.print(gy); Serial.print("\t");
-    Serial.println(gz);
-    delay(100);
+    // accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    // Serial.print("a/g:\t");
+    // Serial.print(ax); Serial.print("\t");
+    // Serial.print(ay); Serial.print("\t");
+    // Serial.print(az); Serial.print("\t");
+    // Serial.print(gx); Serial.print("\t");
+    // Serial.print(gy); Serial.print("\t");
+    // Serial.println(gz);
+    // delay(100);
+
+    Serial1.println("I hear from you, amigo!");
+    delay(1000);
 }
 
