@@ -33,6 +33,10 @@ float p_vect[3];
 // flow control
 unsigned long time_last, time_now;  // microsecond
 unsigned long period = 20000;  // period for main loop
+// debug print control
+unsigned long debug_period = 100000;
+uint8_t debug_freq = (uint8_t)((float)debug_period/period);
+uint8_t debug_count = 0;
 
 void setup() {
     Serial.begin(9600);  // USB
@@ -80,6 +84,29 @@ void loop() {
         // roll *= 180.0f / PI;
         // pitch *= 180.0f / PI;
         // yaw *= 180.0f / PI;
+
+        // projection of pointing-up unit vector in inertial frame to body frame
+        p_vect[0] = 2*(q[1]*q[3] - q[0]*q[2]);
+        p_vect[1] = 2*(q[0]*q[1] + q[2]*q[3]);
+        p_vect[2] = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
+
+       // debug print
+       debug_count = debug_count + 1;
+       if (debug_count > debug_freq) {
+           debug_count = 0;
+           Serial.print(ax); Serial.print("\t");
+           Serial.print(ay); Serial.print("\t");
+           Serial.print(az); Serial.print("\t");
+           Serial.print(gx); Serial.print("\t");
+           Serial.print(gy); Serial.print("\t");
+           Serial.println(gz);
+           // Serial.print(roll); Serial.print("\t");
+           // Serial.print(pitch); Serial.print("\t");
+           // Serial.println(yaw);
+           // Serial.print(p_vect[0]); Serial.print("\t");
+           // Serial.print(p_vect[1]); Serial.print("\t");
+           // Serial.println(p_vect[2]);
+       }
 
         // read bluetooth command
         if (Serial1.available()) {
