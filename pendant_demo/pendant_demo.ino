@@ -1,6 +1,9 @@
 // This is the demo program for this bluetooth-neopixel pendant.
 // Author: Yang Liu, 12/04/2018.
 
+// Bluetooth command format: keyword + space + argument(optional)
+// Example(without quotation mark): "led0 red", "all blue", "brightness 30", "rainbow"
+
 // The circuit board shares the same body frame with the IMU.
 // If facing the PCB, x axis points to the right,
 // y axis points up to the switch, z axis points out from the board.
@@ -16,6 +19,24 @@
 #define NEOPIXEL_PIN 10
 #define NEOPIXEL_NUM 10
 #define MPU6050_ADDRESS 0x68
+
+// MPU6050 variables
+MPU6050 mpu6050;
+int16_t accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
+float ax, ay, az;       // Stores the real accel value in g's
+int16_t gyroCount[3];   // Stores the 16-bit signed gyro sensor output
+float gx, gy, gz;       // Stores the real gyro value in degrees per seconds
+float aRes = 2.0/32768.0;
+float gRes = 250.0/32768.0;
+float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};  // vector to hold quaternion
+float roll, pitch, yaw;  // in degrees
+// for quaternion update
+float GyroMeasError = PI * (40.0f / 180.0f);     // gyroscope measurement error in rads/s (start at 60 deg/s), then reduce after ~10 s to 3
+float beta = sqrt(3.0f / 4.0f) * GyroMeasError;  // compute beta
+float GyroMeasDrift = PI * (2.0f / 180.0f);      // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
+float zeta = sqrt(3.0f / 4.0f) * GyroMeasDrift;  // compute zeta, the other free parameter in the Madgwick scheme usually set to a small or zero value
+float deltat = 0.0f;
+float p_vect[3];
 
 // Neopixel variables
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NEOPIXEL_NUM, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
@@ -43,23 +64,9 @@ uint32_t color_beige = pixels.Color(255,250,200);
 uint32_t color_mint = pixels.Color(170,255,195);
 uint32_t color_lavender = pixels.Color(170,190,255);
 
-// MPU6050 variables
-MPU6050 mpu6050;
-int16_t accelCount[3];  // Stores the 16-bit signed accelerometer sensor output
-float ax, ay, az;       // Stores the real accel value in g's
-int16_t gyroCount[3];   // Stores the 16-bit signed gyro sensor output
-float gx, gy, gz;       // Stores the real gyro value in degrees per seconds
-float aRes = 2.0/32768.0;
-float gRes = 250.0/32768.0;
-float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};  // vector to hold quaternion
-float roll, pitch, yaw;  // in degrees
-// for quaternion update
-float GyroMeasError = PI * (40.0f / 180.0f);     // gyroscope measurement error in rads/s (start at 60 deg/s), then reduce after ~10 s to 3
-float beta = sqrt(3.0f / 4.0f) * GyroMeasError;  // compute beta
-float GyroMeasDrift = PI * (2.0f / 180.0f);      // gyroscope measurement drift in rad/s/s (start at 0.0 deg/s/s)
-float zeta = sqrt(3.0f / 4.0f) * GyroMeasDrift;  // compute zeta, the other free parameter in the Madgwick scheme usually set to a small or zero value
-float deltat = 0.0f;
-float p_vect[3];
+// bluetooth variables
+char buffer[20];
+
 
 // flow control
 unsigned long time_last, time_now;  // microsecond
@@ -120,26 +127,27 @@ void loop() {
         p_vect[1] = 2*(q[0]*q[1] + q[2]*q[3]);
         p_vect[2] = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
 
-        // debug print
-        debug_count = debug_count + 1;
-        if (debug_count > debug_freq) {
-            debug_count = 0;
-            // Serial.print(ax); Serial.print("\t");
-            // Serial.print(ay); Serial.print("\t");
-            // Serial.print(az); Serial.print("\t");
-            // Serial.print(gx); Serial.print("\t");
-            // Serial.print(gy); Serial.print("\t");
-            // Serial.println(gz);
-            // Serial.print(roll); Serial.print("\t");
-            // Serial.print(pitch); Serial.print("\t");
-            // Serial.println(yaw);
-            Serial.print(p_vect[0]); Serial.print("\t");
-            Serial.print(p_vect[1]); Serial.print("\t");
-            Serial.println(p_vect[2]);
-        }
+        // // debug print
+        // debug_count = debug_count + 1;
+        // if (debug_count > debug_freq) {
+        //     debug_count = 0;
+        //     // Serial.print(ax); Serial.print("\t");
+        //     // Serial.print(ay); Serial.print("\t");
+        //     // Serial.print(az); Serial.print("\t");
+        //     // Serial.print(gx); Serial.print("\t");
+        //     // Serial.print(gy); Serial.print("\t");
+        //     // Serial.println(gz);
+        //     // Serial.print(roll); Serial.print("\t");
+        //     // Serial.print(pitch); Serial.print("\t");
+        //     // Serial.println(yaw);
+        //     Serial.print(p_vect[0]); Serial.print("\t");
+        //     Serial.print(p_vect[1]); Serial.print("\t");
+        //     Serial.println(p_vect[2]);
+        // }
 
         // read bluetooth command
-        if (Serial1.available()) {
+        while (Serial1.available()) {
+            Serial.println(Serial1.read(), DEC);
         }
     }
 }
