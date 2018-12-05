@@ -1,3 +1,13 @@
+// This is the demo program for this bluetooth-neopixel pendant.
+// Author: Yang Liu, 12/04/2018.
+
+// The circuit board shares the same body frame with the IMU.
+// If facing the PCB, x axis points to the right,
+// y axis points up to the switch, z axis points out from the board.
+
+// List of distinct colors:
+// https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
+
 #include <Adafruit_NeoPixel.h>
 #include "Wire.h"
 #include "I2Cdev.h"
@@ -11,6 +21,27 @@
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NEOPIXEL_NUM, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 uint32_t color_white = pixels.Color(255,255,255);
 uint32_t color_black = pixels.Color(0,0,0);
+uint8_t full_brightness = 50;
+uint32_t color_maroon = pixels.Color(128,0,0);
+uint32_t color_brown = pixels.Color(170,110,40);
+uint32_t color_olive = pixels.Color(128,128,0);
+uint32_t color_teal = pixels.Color(0,128,128);
+uint32_t color_navy = pixels.Color(0,0,128);
+uint32_t color_red = pixels.Color(230,25,75);
+uint32_t color_orange = pixels.Color(245,130,48);
+uint32_t color_yellow = pixels.Color(255,255,25);
+uint32_t color_lime = pixels.Color(210,245,60);
+uint32_t color_green = pixels.Color(60,180,75);
+uint32_t color_cyan = pixels.Color(70,240,240);
+uint32_t color_blue = pixels.Color(0,130,200);
+uint32_t color_purple = pixels.Color(145,30,180);
+uint32_t color_magenta = pixels.Color(240,50,230);
+uint32_t color_grey = pixels.Color(128,128,128);
+uint32_t color_pink = pixels.Color(250,190,190);
+uint32_t color_apricot = pixels.Color(255,215,180);
+uint32_t color_beige = pixels.Color(255,250,200);
+uint32_t color_mint = pixels.Color(170,255,195);
+uint32_t color_lavender = pixels.Color(170,190,255);
 
 // MPU6050 variables
 MPU6050 mpu6050;
@@ -52,9 +83,8 @@ void setup() {
     int serial_index;
     uint8_t pos[3];
     for (uint8_t i=0; i<NEOPIXEL_NUM; i++) {
-        pixels.setPixelColor(i, color_white);
+        pixels.setPixelColor(i, color_black);
     }
-    pixels.setBrightness(5);
     pixels.show();
 
     time_last = micros();
@@ -85,28 +115,28 @@ void loop() {
         // pitch *= 180.0f / PI;
         // yaw *= 180.0f / PI;
 
-        // projection of pointing-up unit vector in inertial frame to body frame
+        // projection of pointing-up unit vector in inertial frame to IMU's body frame
         p_vect[0] = 2*(q[1]*q[3] - q[0]*q[2]);
         p_vect[1] = 2*(q[0]*q[1] + q[2]*q[3]);
         p_vect[2] = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
 
-       // debug print
-       debug_count = debug_count + 1;
-       if (debug_count > debug_freq) {
-           debug_count = 0;
-           Serial.print(ax); Serial.print("\t");
-           Serial.print(ay); Serial.print("\t");
-           Serial.print(az); Serial.print("\t");
-           Serial.print(gx); Serial.print("\t");
-           Serial.print(gy); Serial.print("\t");
-           Serial.println(gz);
-           // Serial.print(roll); Serial.print("\t");
-           // Serial.print(pitch); Serial.print("\t");
-           // Serial.println(yaw);
-           // Serial.print(p_vect[0]); Serial.print("\t");
-           // Serial.print(p_vect[1]); Serial.print("\t");
-           // Serial.println(p_vect[2]);
-       }
+        // debug print
+        debug_count = debug_count + 1;
+        if (debug_count > debug_freq) {
+            debug_count = 0;
+            // Serial.print(ax); Serial.print("\t");
+            // Serial.print(ay); Serial.print("\t");
+            // Serial.print(az); Serial.print("\t");
+            // Serial.print(gx); Serial.print("\t");
+            // Serial.print(gy); Serial.print("\t");
+            // Serial.println(gz);
+            // Serial.print(roll); Serial.print("\t");
+            // Serial.print(pitch); Serial.print("\t");
+            // Serial.println(yaw);
+            Serial.print(p_vect[0]); Serial.print("\t");
+            Serial.print(p_vect[1]); Serial.print("\t");
+            Serial.println(p_vect[2]);
+        }
 
         // read bluetooth command
         if (Serial1.available()) {
