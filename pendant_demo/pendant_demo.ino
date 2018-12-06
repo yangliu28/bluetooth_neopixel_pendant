@@ -19,6 +19,7 @@
 #define NEOPIXEL_PIN 10
 #define NEOPIXEL_NUM 10
 #define MPU6050_ADDRESS 0x68
+#define BUFFER_LEN 20
 
 // MPU6050 variables
 MPU6050 mpu6050;
@@ -42,7 +43,6 @@ float p_vect[3];
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NEOPIXEL_NUM, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
 uint32_t color_white = pixels.Color(255,255,255);
 uint32_t color_black = pixels.Color(0,0,0);
-uint8_t full_brightness = 50;
 uint32_t color_maroon = pixels.Color(128,0,0);
 uint32_t color_brown = pixels.Color(170,110,40);
 uint32_t color_olive = pixels.Color(128,128,0);
@@ -63,10 +63,14 @@ uint32_t color_apricot = pixels.Color(255,215,180);
 uint32_t color_beige = pixels.Color(255,250,200);
 uint32_t color_mint = pixels.Color(170,255,195);
 uint32_t color_lavender = pixels.Color(170,190,255);
+uint8_t full_brightness = 50;
+uint32_t pixel_colors[10];
 
-// bluetooth variables
-char buffer[20];
-
+// bluetooth control variables
+char buffer[BUFFER_LEN];
+uint8_t buffer_index;
+enum MODE {ADDRESSING_MODE, RAINBOW_MODE, GRAVITY_MODE, SHADE_MODE};
+MODE mode;
 
 // flow control
 unsigned long time_last, time_now;  // microsecond
@@ -146,10 +150,56 @@ void loop() {
         // }
 
         // read bluetooth command
-        while (Serial1.available()) {
-            Serial.println(Serial1.read(), DEC);
+        for (uint8_t i=0; i<BUFFER_LEN; i++) {
+            buffer[i] = 0;
+        }
+        buffer_index = 0;
+        while (Serial1.available() && buffer_index < BUFFER_LEN) {
+            buffer[buffer_index] = Serial1.read();
+            if (buffer[buffer_index] == '\n') {
+                break;
+            }
+            buffer_index++;
+        }
+        if (buffer_index == BUFFER_LEN || buffer[buffer_index] != '\n') {
+            // buffer overflow, or receive incomplete command
+            continue;
+        }
+        // look for the first space
+        uint8_t space_pos = 0;
+        for (uint8_t i=0; i<buffer_index; i++) {
+            if (buffer[i] == ' ') {
+                space_pos = i;
+                break;
+            }
+        }
+        if (space_pos == 0 || space_pos == buffer_index-1) {
+            // space is not the first or last character
+            continue;
+        }
+        // match the command
+
+
+        // update the pixel colors
+        for (uint8_t i=0; i<NEOPIXEL_NUM; i++) {
+            pixels.setPixelColor(i, pixel_colors[i]);
+        }
+        pixels.setBrightness(full_brightness);
+        pixels.show();
+    }
+}
+
+// check if input string match the command
+uint8_t match_cmd(char* input, uint8_t input_len, char* cmd) {
+    if (input_len != strlen(cmd)) {
+        return 0;
+    }
+    for (uint8_t i=0; i<input_len; i++) {
+        if (*(input+i) != *(cmd+i)) {
+            return 0;
         }
     }
+    return 1;
 }
 
 // Input a value 0 to 255 to get a color value.
