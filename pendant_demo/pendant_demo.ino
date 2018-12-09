@@ -14,6 +14,8 @@
 // white, black, maroon, brown, olive, teal, navy, red, orange, yellow, lime
 // green, cyan, blue, pruple, magenta, grey, pink, apricot, beige, mint, lavender
 
+// Received string should end with carriage return(13), then line feed(10)
+
 // The circuit board shares the same body frame with the IMU.
 // If facing the PCB, x axis points to the right,
 // y axis points up to the switch, z axis points out from the board.
@@ -73,9 +75,8 @@ uint32_t color_apricot = pixels.Color(255,215,180);
 uint32_t color_beige = pixels.Color(255,250,200);
 uint32_t color_mint = pixels.Color(170,255,195);
 uint32_t color_lavender = pixels.Color(170,190,255);
-uint8_t brightness;
-uint32_t pixel_colors[NEOPIXEL_NUM];
 int rainbow_index = 0;
+uint32_t pattern_color;  // for gravity and shade patterns
 
 // bluetooth control variables
 char buffer[BUFFER_LEN];
@@ -94,6 +95,7 @@ uint8_t debug_count = 0;
 void setup() {
     Serial.begin(9600);  // USB
     Serial1.begin(9600);  // bluetooth
+    Serial.setTimeout(100);
 
     // mpu6050
     Wire.begin();  // join I2C bus
@@ -102,9 +104,9 @@ void setup() {
 
     // neopixels
     mode = ADDRESSING_MODE;
-    brightness = 50;
-    set_all(&color_orange);
-    pixels.setBrightness(brightness);
+    pixels.begin();
+    set_all(&color_black);
+    pixels.setBrightness(50);
     pixels.show();
 
     time_last = micros();
@@ -162,56 +164,186 @@ void loop() {
         for (uint8_t i=0; i<BUFFER_LEN; i++) {
             buffer[i] = 0;
         }
-        buffer_index = 0;
-        while (Serial1.available() && buffer_index < BUFFER_LEN) {
-            buffer[buffer_index] = Serial1.read();
-            if (buffer[buffer_index] == '\n') {
-                break;
-            }
-            buffer_index++;
-        }
-        if (buffer_index != 0 && buffer_index != BUFFER_LEN &&
-            buffer[buffer_index] == '\n') {
-            // proceed if buffer didn't overflow and complete command is received
-            // look for the first space
-            int8_t space_pos = -1;
-            for (uint8_t i=0; i<buffer_index; i++) {
-                if (buffer[i] == ' ') {
-                    space_pos = i;
-                    break;
+        if (Serial1.available()) {
+            int command_len;
+            // read until the line feed character
+            command_len = Serial1.readBytesUntil(10, buffer, BUFFER_LEN);
+            Serial.println(buffer);
+            if (buffer[command_len-1] == 13) {
+                // look for the first space
+                uint8_t space_found = 0;
+                uint8_t space_pos = 0;
+                for (uint8_t i=0; i<command_len-1; i++) {
+                    if (buffer[i] == ' ') {
+                        space_found = 1;
+                        space_pos = i;
+                        break;
+                    }
                 }
-            }
-            if (space_pos == 0 || space_pos == buffer_index-1) {
-                // invalid if space is the first or last character
-                return;
-            }
-            // match the command
-            if (space_pos == -1) {
-                // space not found, attempt to match the singular commands
-                // list all singular commands in below
-                if (match_cmd(buffer, buffer_index, "rainbow")) {
-                    mode = RAINBOW_MODE;
-                    set_all(&color_black);
+                if (!space_found) {
+                    // match singular commands
+                    if (match_str(buffer, command_len-1, "rainbow")) {
+                        mode = RAINBOW_MODE;
+                        set_all(&color_black);
+                    }
+                }
+                else if (space_found && space_pos != 0 && space_pos != command_len-2) {
+                    // match combinational commands, if space is not the first/last character
+                    if (match_str(buffer, space_pos, "brightness")) {
+                        int input_brightness = atoi(buffer+space_pos);
+                        Serial.print("received brightness: ");
+                        Serial.println(input_brightness);
+                        if (input_brightness >= 0 && input_brightness <= 255) {
+                            pixels.setBrightness(uint8_t(input_brightness));
+                        }
+                    }
+                    else if (match_str(buffer, space_pos, "all")) {
+                        uint32_t input_color;
+                        if (match_color(buffer+space_pos+1, command_len-space_pos-2, &input_color)) {
+                            mode = ADDRESSING_MODE;
+                            set_all(&input_color);
+                        }
+                    }
+                    else if (match_str(buffer, space_pos-1, "led")) {
+                        uint8_t input_index = buffer[space_pos-1] - 48;
+                        uint32_t input_color;
+                        if (match_color(buffer+space_pos+1, command_len-space_pos-2, &input_color)) {
+                            if (mode != ADDRESSING_MODE) {
+                                mode = ADDRESSING_MODE;
+                                set_all(&input_color);
+                            }
+                            pixels.setPixelColor(input_index, input_color);
+                        }
+                    }
+                    else if (match_str(buffer, space_pos, "gravity")) {
+                        if (match_color(buffer+space_pos+1, command_len-space_pos-2, &pattern_color)) {
+                            mode = GRAVITY_MODE;
+                            set_all(&color_black);
+                        }
+                    }
+                    else if (match_str(buffer, space_pos, "shade")) {
+                        if (match_color(buffer+space_pos+1, command_len-space_pos-2, &pattern_color)) {
+                            mode = SHADE_MODE;
+                            set_all(&color_black);
+                        }
+                    }
                 }
             }
         }
 
         // update pixel color variables
         if (mode == RAINBOW_MODE) {
-            Serial.println("in rainbow mode");
             for (uint8_t i=0; i<NEOPIXEL_NUM; i++) {
                 pixels.setPixelColor(i, pixel_wheel((i * 256 / 25 + rainbow_index) & 255));
             }
+            rainbow_index = rainbow_index + 2;
+        }
+        else if (mode == GRAVITY_MODE) {
+
+        }
+        else if (mode = SHADE_MODE) {
+            
         }
 
-//        Serial.println("updating neopixel colors");
-//        pixels.setBrightness(brightness);
-//        pixels.show();
+        pixels.show();
     }
 }
 
+// map input string to a color
+uint8_t match_color(char* input, uint8_t input_len, uint32_t* return_color) {
+    if (match_str(input, input_len, "white")) {
+        *return_color = color_white;
+        return 1;
+    }
+    else if (match_str(input, input_len, "black")) {
+        *return_color = color_black;
+        return 1;
+    }
+    else if (match_str(input, input_len, "maroon")) {
+        *return_color = color_maroon;
+        return 1;
+    }
+    else if (match_str(input, input_len, "brown")) {
+        *return_color = color_brown;
+        return 1;
+    }
+    else if (match_str(input, input_len, "olive")) {
+        *return_color = color_olive;
+        return 1;
+    }
+    else if (match_str(input, input_len, "teal")) {
+        *return_color = color_teal;
+        return 1;
+    }
+    else if (match_str(input, input_len, "navy")) {
+        *return_color = color_navy;
+        return 1;
+    }
+    else if (match_str(input, input_len, "red")) {
+        *return_color = color_red;
+        return 1;
+    }
+    else if (match_str(input, input_len, "orange")) {
+        *return_color = color_orange;
+        return 1;
+    }
+    else if (match_str(input, input_len, "yellow")) {
+        *return_color = color_yellow;
+        return 1;
+    }
+    else if (match_str(input, input_len, "lime")) {
+        *return_color = color_lime;
+        return 1;
+    }
+    else if (match_str(input, input_len, "green")) {
+        *return_color = color_green;
+        return 1;
+    }
+    else if (match_str(input, input_len, "cyan")) {
+        *return_color = color_cyan;
+        return 1;
+    }
+    else if (match_str(input, input_len, "blue")) {
+        *return_color = color_blue;
+        return 1;
+    }
+    else if (match_str(input, input_len, "purple")) {
+        *return_color = color_purple;
+        return 1;
+    }
+    else if (match_str(input, input_len, "magenta")) {
+        *return_color = color_magenta;
+        return 1;
+    }
+    else if (match_str(input, input_len, "grey")) {
+        *return_color = color_grey;
+        return 1;
+    }
+    else if (match_str(input, input_len, "pink")) {
+        *return_color = color_pink;
+        return 1;
+    }
+    else if (match_str(input, input_len, "apricot")) {
+        *return_color = color_apricot;
+        return 1;
+    }
+    else if (match_str(input, input_len, "beige")) {
+        *return_color = color_beige;
+        return 1;
+    }
+    else if (match_str(input, input_len, "mint")) {
+        *return_color = color_mint;
+        return 1;
+    }
+    else if (match_str(input, input_len, "lavender")) {
+        *return_color = color_lavender;
+        return 1;
+    }
+    return 0;
+}
+
 // check if input string match the command
-uint8_t match_cmd(char* input, uint8_t input_len, char* cmd) {
+uint8_t match_str(char* input, uint8_t input_len, char* cmd) {
     if (input_len != strlen(cmd)) {
         return 0;
     }
