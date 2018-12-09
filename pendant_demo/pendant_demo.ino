@@ -27,6 +27,7 @@
 #include "Wire.h"
 #include "I2Cdev.h"
 #include "MPU6050.h"
+#include "math.h"
 
 #define NEOPIXEL_PIN 10
 #define NEOPIXEL_NUM 10
@@ -77,6 +78,7 @@ uint32_t color_mint = pixels.Color(170,255,195);
 uint32_t color_lavender = pixels.Color(170,190,255);
 int rainbow_index = 0;
 uint32_t pattern_color;  // for gravity and shade patterns
+uint8_t gravity_pixel_last = 0;
 
 // bluetooth control variables
 char buffer[BUFFER_LEN];
@@ -142,23 +144,23 @@ void loop() {
         p_vect[1] = 2*(q[0]*q[1] + q[2]*q[3]);
         p_vect[2] = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
 
-        // // debug print
-        // debug_count = debug_count + 1;
-        // if (debug_count > debug_freq) {
-        //     debug_count = 0;
-        //     // Serial.print(ax); Serial.print("\t");
-        //     // Serial.print(ay); Serial.print("\t");
-        //     // Serial.print(az); Serial.print("\t");
-        //     // Serial.print(gx); Serial.print("\t");
-        //     // Serial.print(gy); Serial.print("\t");
-        //     // Serial.println(gz);
-        //     // Serial.print(roll); Serial.print("\t");
-        //     // Serial.print(pitch); Serial.print("\t");
-        //     // Serial.println(yaw);
-        //     Serial.print(p_vect[0]); Serial.print("\t");
-        //     Serial.print(p_vect[1]); Serial.print("\t");
-        //     Serial.println(p_vect[2]);
-        // }
+         // debug print
+         debug_count = debug_count + 1;
+         if (debug_count > debug_freq) {
+             debug_count = 0;
+             // Serial.print(ax); Serial.print("\t");
+             // Serial.print(ay); Serial.print("\t");
+             // Serial.print(az); Serial.print("\t");
+             // Serial.print(gx); Serial.print("\t");
+             // Serial.print(gy); Serial.print("\t");
+             // Serial.println(gz);
+             // Serial.print(roll); Serial.print("\t");
+             // Serial.print(pitch); Serial.print("\t");
+             // Serial.println(yaw);
+             Serial.print(p_vect[0]); Serial.print("\t");
+             Serial.print(p_vect[1]); Serial.print("\t");
+             Serial.println(p_vect[2]);
+         }
 
         // read bluetooth command
         for (uint8_t i=0; i<BUFFER_LEN; i++) {
@@ -239,14 +241,24 @@ void loop() {
             rainbow_index = rainbow_index + 2;
         }
         else if (mode == GRAVITY_MODE) {
-
+            pixels.setPixelColor(gravity_pixel_last, color_black);
+            uint8_t gravity_pixel = (uint8_t(reset_range(atan2(p_vect[1], p_vect[0])+2*PI/20) / (2*PI/10)) + 7 - 5) % 10;
+            pixels.setPixelColor(gravity_pixel, pattern_color);
+            gravity_pixel_last = gravity_pixel;
         }
         else if (mode = SHADE_MODE) {
-            
+
         }
 
         pixels.show();
     }
+}
+
+double reset_range(double rad) {
+    while (rad < 0) {
+        rad += 2*PI;
+    }
+    return rad;
 }
 
 // map input string to a color
