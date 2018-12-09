@@ -2,7 +2,17 @@
 // Author: Yang Liu, 12/04/2018.
 
 // Bluetooth command format: keyword + space + argument(optional)
-// Example(without quotation mark): "led0 red", "all blue", "brightness 30", "rainbow"
+// Singular commands
+    // "rainbow", rainbow mode
+// Combinational commands:
+    // "brightness ##", 1 min brightness, 0 max brightness, 255 just below max
+    // "all color_name", set all neopixels to same color
+    // "led# color_name", addressing neopixels individuallly, number from 0 to 9
+    // "gravity color_name", gravity mode
+    // "shade color_name", shade mode
+// Supported color names:
+// white, black, maroon, brown, olive, teal, navy, red, orange, yellow, lime
+// green, cyan, blue, pruple, magenta, grey, pink, apricot, beige, mint, lavender
 
 // The circuit board shares the same body frame with the IMU.
 // If facing the PCB, x axis points to the right,
@@ -63,8 +73,9 @@ uint32_t color_apricot = pixels.Color(255,215,180);
 uint32_t color_beige = pixels.Color(255,250,200);
 uint32_t color_mint = pixels.Color(170,255,195);
 uint32_t color_lavender = pixels.Color(170,190,255);
-uint8_t full_brightness = 50;
-uint32_t pixel_colors[10];
+uint8_t brightness;
+uint32_t pixel_colors[NEOPIXEL_NUM];
+int rainbow_index = 0;
 
 // bluetooth control variables
 char buffer[BUFFER_LEN];
@@ -90,12 +101,10 @@ void setup() {
     mpu6050.initialize();
 
     // neopixels
-    pixels.begin();
-    int serial_index;
-    uint8_t pos[3];
-    for (uint8_t i=0; i<NEOPIXEL_NUM; i++) {
-        pixels.setPixelColor(i, color_black);
-    }
+    mode = ADDRESSING_MODE;
+    brightness = 50;
+    set_all(&color_orange);
+    pixels.setBrightness(brightness);
     pixels.show();
 
     time_last = micros();
@@ -161,31 +170,43 @@ void loop() {
             }
             buffer_index++;
         }
-        if (buffer_index == BUFFER_LEN || buffer[buffer_index] != '\n') {
-            // buffer overflow, or receive incomplete command
-            continue;
-        }
-        // look for the first space
-        uint8_t space_pos = 0;
-        for (uint8_t i=0; i<buffer_index; i++) {
-            if (buffer[i] == ' ') {
-                space_pos = i;
-                break;
+        if (buffer_index != 0 && buffer_index != BUFFER_LEN &&
+            buffer[buffer_index] == '\n') {
+            // proceed if buffer didn't overflow and complete command is received
+            // look for the first space
+            int8_t space_pos = -1;
+            for (uint8_t i=0; i<buffer_index; i++) {
+                if (buffer[i] == ' ') {
+                    space_pos = i;
+                    break;
+                }
+            }
+            if (space_pos == 0 || space_pos == buffer_index-1) {
+                // invalid if space is the first or last character
+                return;
+            }
+            // match the command
+            if (space_pos == -1) {
+                // space not found, attempt to match the singular commands
+                // list all singular commands in below
+                if (match_cmd(buffer, buffer_index, "rainbow")) {
+                    mode = RAINBOW_MODE;
+                    set_all(&color_black);
+                }
             }
         }
-        if (space_pos == 0 || space_pos == buffer_index-1) {
-            // space is not the first or last character
-            continue;
-        }
-        // match the command
 
-
-        // update the pixel colors
-        for (uint8_t i=0; i<NEOPIXEL_NUM; i++) {
-            pixels.setPixelColor(i, pixel_colors[i]);
+        // update pixel color variables
+        if (mode == RAINBOW_MODE) {
+            Serial.println("in rainbow mode");
+            for (uint8_t i=0; i<NEOPIXEL_NUM; i++) {
+                pixels.setPixelColor(i, pixel_wheel((i * 256 / 25 + rainbow_index) & 255));
+            }
         }
-        pixels.setBrightness(full_brightness);
-        pixels.show();
+
+//        Serial.println("updating neopixel colors");
+//        pixels.setBrightness(brightness);
+//        pixels.show();
     }
 }
 
@@ -200,6 +221,13 @@ uint8_t match_cmd(char* input, uint8_t input_len, char* cmd) {
         }
     }
     return 1;
+}
+
+// set all neopixels to one color
+void set_all(uint32_t* color) {
+    for (uint8_t i=0; i<NEOPIXEL_NUM; i++) {
+        pixels.setPixelColor(i, &color);
+    }
 }
 
 // Input a value 0 to 255 to get a color value.
