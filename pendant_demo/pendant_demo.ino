@@ -1,6 +1,7 @@
 // This is the demo program for this bluetooth-neopixel pendant.
 // Author: Yang Liu, 12/04/2018.
 
+// Received string should end with carriage return(13), then line feed(10)
 // Bluetooth command format: keyword + space + argument(optional)
 // Singular commands
     // "rainbow", rainbow mode
@@ -9,12 +10,9 @@
     // "all color_name", set all neopixels to same color
     // "led# color_name", addressing neopixels individuallly, number from 0 to 9
     // "gravity color_name", gravity mode
-    // "shade color_name", shade mode
 // Supported color names:
 // white, black, maroon, brown, olive, teal, navy, red, orange, yellow, lime
 // green, cyan, blue, pruple, magenta, grey, pink, apricot, beige, mint, lavender
-
-// Received string should end with carriage return(13), then line feed(10)
 
 // The circuit board shares the same body frame with the IMU.
 // If facing the PCB, x axis points to the right,
@@ -77,13 +75,13 @@ uint32_t color_beige = pixels.Color(255,250,200);
 uint32_t color_mint = pixels.Color(170,255,195);
 uint32_t color_lavender = pixels.Color(170,190,255);
 int rainbow_index = 0;
-uint32_t pattern_color;  // for gravity and shade patterns
+uint32_t gravity_color;
 uint8_t gravity_pixel_last = 0;
 
 // bluetooth control variables
 char buffer[BUFFER_LEN];
 uint8_t buffer_index;
-enum MODE {ADDRESSING_MODE, RAINBOW_MODE, GRAVITY_MODE, SHADE_MODE};
+enum MODE {ADDRESSING_MODE, RAINBOW_MODE, GRAVITY_MODE};
 MODE mode;
 
 // flow control
@@ -107,7 +105,7 @@ void setup() {
     // neopixels
     mode = ADDRESSING_MODE;
     pixels.begin();
-    set_all(&color_black);
+    set_all(color_black);
     pixels.setBrightness(50);
     pixels.show();
 
@@ -144,23 +142,23 @@ void loop() {
         p_vect[1] = 2*(q[0]*q[1] + q[2]*q[3]);
         p_vect[2] = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
 
-         // debug print
-         debug_count = debug_count + 1;
-         if (debug_count > debug_freq) {
-             debug_count = 0;
-             // Serial.print(ax); Serial.print("\t");
-             // Serial.print(ay); Serial.print("\t");
-             // Serial.print(az); Serial.print("\t");
-             // Serial.print(gx); Serial.print("\t");
-             // Serial.print(gy); Serial.print("\t");
-             // Serial.println(gz);
-             // Serial.print(roll); Serial.print("\t");
-             // Serial.print(pitch); Serial.print("\t");
-             // Serial.println(yaw);
-             Serial.print(p_vect[0]); Serial.print("\t");
-             Serial.print(p_vect[1]); Serial.print("\t");
-             Serial.println(p_vect[2]);
-         }
+        // // debug print
+        // debug_count = debug_count + 1;
+        // if (debug_count > debug_freq) {
+        //     debug_count = 0;
+        //     // Serial.print(ax); Serial.print("\t");
+        //     // Serial.print(ay); Serial.print("\t");
+        //     // Serial.print(az); Serial.print("\t");
+        //     // Serial.print(gx); Serial.print("\t");
+        //     // Serial.print(gy); Serial.print("\t");
+        //     // Serial.println(gz);
+        //     // Serial.print(roll); Serial.print("\t");
+        //     // Serial.print(pitch); Serial.print("\t");
+        //     // Serial.println(yaw);
+        //     Serial.print(p_vect[0]); Serial.print("\t");
+        //     Serial.print(p_vect[1]); Serial.print("\t");
+        //     Serial.println(p_vect[2]);
+        // }
 
         // read bluetooth command
         for (uint8_t i=0; i<BUFFER_LEN; i++) {
@@ -186,7 +184,7 @@ void loop() {
                     // match singular commands
                     if (match_str(buffer, command_len-1, "rainbow")) {
                         mode = RAINBOW_MODE;
-                        set_all(&color_black);
+                        set_all(color_black);
                     }
                 }
                 else if (space_found && space_pos != 0 && space_pos != command_len-2) {
@@ -203,7 +201,7 @@ void loop() {
                         uint32_t input_color;
                         if (match_color(buffer+space_pos+1, command_len-space_pos-2, &input_color)) {
                             mode = ADDRESSING_MODE;
-                            set_all(&input_color);
+                            set_all(input_color);
                         }
                     }
                     else if (match_str(buffer, space_pos-1, "led")) {
@@ -212,21 +210,15 @@ void loop() {
                         if (match_color(buffer+space_pos+1, command_len-space_pos-2, &input_color)) {
                             if (mode != ADDRESSING_MODE) {
                                 mode = ADDRESSING_MODE;
-                                set_all(&input_color);
+                                set_all(color_black);
                             }
                             pixels.setPixelColor(input_index, input_color);
                         }
                     }
                     else if (match_str(buffer, space_pos, "gravity")) {
-                        if (match_color(buffer+space_pos+1, command_len-space_pos-2, &pattern_color)) {
+                        if (match_color(buffer+space_pos+1, command_len-space_pos-2, &gravity_color)) {
                             mode = GRAVITY_MODE;
-                            set_all(&color_black);
-                        }
-                    }
-                    else if (match_str(buffer, space_pos, "shade")) {
-                        if (match_color(buffer+space_pos+1, command_len-space_pos-2, &pattern_color)) {
-                            mode = SHADE_MODE;
-                            set_all(&color_black);
+                            set_all(color_black);
                         }
                     }
                 }
@@ -243,11 +235,8 @@ void loop() {
         else if (mode == GRAVITY_MODE) {
             pixels.setPixelColor(gravity_pixel_last, color_black);
             uint8_t gravity_pixel = (uint8_t(reset_range(atan2(p_vect[1], p_vect[0])+2*PI/20) / (2*PI/10)) + 7 - 5) % 10;
-            pixels.setPixelColor(gravity_pixel, pattern_color);
+            pixels.setPixelColor(gravity_pixel, gravity_color);
             gravity_pixel_last = gravity_pixel;
-        }
-        else if (mode = SHADE_MODE) {
-
         }
 
         pixels.show();
@@ -368,9 +357,9 @@ uint8_t match_str(char* input, uint8_t input_len, char* cmd) {
 }
 
 // set all neopixels to one color
-void set_all(uint32_t* color) {
+void set_all(uint32_t color) {
     for (uint8_t i=0; i<NEOPIXEL_NUM; i++) {
-        pixels.setPixelColor(i, &color);
+        pixels.setPixelColor(i, color);
     }
 }
 
