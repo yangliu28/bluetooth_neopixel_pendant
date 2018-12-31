@@ -31,6 +31,8 @@
 #define NEOPIXEL_NUM 10
 #define MPU6050_ADDRESS 0x68
 #define BUFFER_LEN 20
+#define BATTERY_MEASURE A0
+#define LED13 13
 
 // MPU6050 variables
 MPU6050 mpu6050;
@@ -109,6 +111,10 @@ void setup() {
     pixels.setBrightness(50);
     pixels.show();
 
+    digitalWrite(LED13, HIGH);
+    Serial.print("battery voltage: ");
+    Serial.print(analogRead(BATTERY_MEASURE)*3.3/1023.0*2.0);
+
     time_last = micros();
 }
 
@@ -142,23 +148,24 @@ void loop() {
         p_vect[1] = 2*(q[0]*q[1] + q[2]*q[3]);
         p_vect[2] = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
 
-        // // debug print
-        // debug_count = debug_count + 1;
-        // if (debug_count > debug_freq) {
-        //     debug_count = 0;
-        //     // Serial.print(ax); Serial.print("\t");
-        //     // Serial.print(ay); Serial.print("\t");
-        //     // Serial.print(az); Serial.print("\t");
-        //     // Serial.print(gx); Serial.print("\t");
-        //     // Serial.print(gy); Serial.print("\t");
-        //     // Serial.println(gz);
-        //     // Serial.print(roll); Serial.print("\t");
-        //     // Serial.print(pitch); Serial.print("\t");
-        //     // Serial.println(yaw);
-        //     Serial.print(p_vect[0]); Serial.print("\t");
-        //     Serial.print(p_vect[1]); Serial.print("\t");
-        //     Serial.println(p_vect[2]);
-        // }
+        // debug print
+        debug_count = debug_count + 1;
+        if (debug_count > debug_freq) {
+            debug_count = 0;
+            // Serial.print(ax); Serial.print("\t");
+            // Serial.print(ay); Serial.print("\t");
+            // Serial.print(az); Serial.print("\t");
+            // Serial.print(gx); Serial.print("\t");
+            // Serial.print(gy); Serial.print("\t");
+            // Serial.print(gz);
+            // Serial.print(roll); Serial.print("\t");
+            // Serial.print(pitch); Serial.print("\t");
+            // Serial.print(yaw);
+            // Serial.print(p_vect[0]); Serial.print("\t");
+            // Serial.print(p_vect[1]); Serial.print("\t");
+            // Serial.print(p_vect[2]);
+            // Serial.println("");
+        }
 
         // read bluetooth command
         for (uint8_t i=0; i<BUFFER_LEN; i++) {
